@@ -1,7 +1,10 @@
 import type { RegisterOptions, UseFormGetValues } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
+import * as yup from 'yup'
 
 type Rules = { [key in 'email' | 'password' | 'confirm_password']?: RegisterOptions }
 
+//esLint-disable-next-line @typescript-eslint/no-explicit-any
 export const getRules = (getValues?: UseFormGetValues<any>): Rules => ({
   email: {
     required: {
@@ -55,3 +58,25 @@ export const getRules = (getValues?: UseFormGetValues<any>): Rules => ({
         : undefined
   }
 })
+
+export const registerSchema = yup.object({
+  email: yup
+    .string()
+    .required('Email là bắt buộc ông nội')
+    .email('Email không đúng định dạng')
+    .min(5, 'Độ dài từ 5 - 160 ký tự')
+    .max(160, 'Độ dài từ 5 - 160 ký tự'),
+  password: yup
+    .string()
+    .required('Password là bắt buộc')
+    .min(5, 'Độ dài từ 5 - 160 ký tự')
+    .max(160, 'Độ dài từ 5 - 160 ký tự'),
+  confirm_password: yup
+    .string()
+    .required('Password là bắt buộc')
+    .min(5, 'Độ dài từ 5 - 160 ký tự')
+    .max(160, 'Độ dài từ 5 - 160 ký tự')
+    .oneOf([yup.ref('password')], ' Nhập lại password không đúng')
+})
+
+export type Schema = yup.InferType<typeof registerSchema>

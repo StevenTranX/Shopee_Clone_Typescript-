@@ -1,8 +1,15 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { getRules } from 'src/utils/rules'
+import { getRules, registerSchema } from 'src/utils/rules'
 
+import Input from 'src/components/Input'
+import { yupResolver } from '@hookform/resolvers/yup'
+import * as yup from 'yup'
+
+import { useMutation } from '@tanstack/react-query'
+import { registerAccount } from 'src/apis/auth.api'
+import { omit } from 'lodash'
 interface FormData {
   email: string
   password: string
@@ -16,22 +23,24 @@ const Register = () => {
     watch,
     getValues,
     formState: { errors }
-  } = useForm<FormData>()
+  } = useForm<FormData>({
+    resolver: yupResolver(registerSchema)
+  })
+  const registerAccountMutation = useMutation({
+    mutationFn: (body: Omit<FormData, 'confirm_password'>) => registerAccount(body)
+  })
+  const value = watch()
 
-  const formValues = watch()
-  const rules = getRules(getValues)
-
-  const onSubmit = handleSubmit(
-    (data) => {
-      //onValid
-      console.log(data)
-    },
-    (data) => {
-      //onInvalid
-      const password = getValues('password')
-      console.log(password)
-    }
-  )
+  const onSubmit = handleSubmit((data) => {
+    //onValid
+    console.log(data)
+    const body = omit(data, ['confirm_password'])
+    // registerAccountMutation.mutate(body, {
+    //   onSuccess: (data) => {
+    //     console.log(data)
+    //   }
+    // })
+  })
 
   return (
     <div className='bg-orange'>
@@ -40,39 +49,33 @@ const Register = () => {
           <div className='lg:col-span-2 lg:col-start-4'>
             <form onSubmit={onSubmit} className='p-10 rounded bg-white shadow-sm'>
               <div className='text-2xl'>Đăng ký</div>
-              <div className='mt-8'>
-                <input
-                  type='text'
-                  autoComplete='on'
-                  className='p-3 w-full outline-none border border-gray-300 focus:border-gray-500 rounded-sm focus:shadow-sm'
-                  placeholder='Email'
-                  formNoValidate
-                  {...register('email', rules.email)}
-                />
-                <div className='mt-1 text-red-600 min-h-[1.25rem] text-sm'>{errors.email?.message}</div>
-              </div>
-              <div className='mt-2'>
-                <input
-                  type='password'
-                  autoComplete='on'
-                  className='p-3 w-full outline-none border border-gray-300 focus:border-gray-500 rounded-sm focus:shadow-sm'
-                  placeholder='Password'
-                  {...register('password', rules.password)}
-                />
-                <div className='mt-1 text-red-600 min-h-[1.25rem] text-sm'>{errors.password?.message}</div>
-              </div>
-              <div className='mt-2'>
-                <input
-                  type='password'
-                  autoComplete='on'
-                  className='p-3 w-full outline-none border border-gray-300 focus:border-gray-500 rounded-sm focus:shadow-sm'
-                  placeholder='Confirm Password'
-                  {...register('confirm_password', {
-                    ...rules.confirm_password
-                  })}
-                />
-                <div className='mt-1 text-red-600 min-h-[1.25rem] text-sm'>{errors.confirm_password?.message}</div>
-              </div>
+              <Input
+                name='email'
+                register={register}
+                type='email'
+                className='mt-8'
+                placeholder='Email'
+                errorMessage={errors.email?.message}
+              ></Input>
+
+              <Input
+                name='password'
+                type='password'
+                className='mt-2'
+                placeholder='Password'
+                register={register}
+                autoComplete='on'
+                errorMessage={errors.password?.message}
+              ></Input>
+              <Input
+                name='confirm_password'
+                type='confirm_password'
+                autoComplete='on'
+                className='mt-2'
+                placeholder='Confirm_password'
+                register={register}
+                errorMessage={errors.confirm_password?.message}
+              ></Input>
               <button
                 type='submit'
                 className='w-full text-center py-4 px-2 uppercase bg-red-500 text-white text-sm hover:bg-red-600'
