@@ -1,26 +1,24 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { getRules, registerSchema } from 'src/utils/rules'
+import { getRules, schema, Schema } from 'src/utils/rules'
 
 import Input from 'src/components/Input'
 import { yupResolver } from '@hookform/resolvers/yup'
-import * as yup from 'yup'
 
 import { useMutation } from '@tanstack/react-query'
 import { registerAccount } from 'src/apis/auth.api'
-import { omit } from 'lodash'
-interface FormData {
-  email: string
-  password: string
-  confirm_password: string
-}
+import omit from 'lodash/omit'
+
+type FormData = Pick<Schema, 'email' | 'password' | 'confirm_password'>
+const registerSchema = schema.pick(['email', 'password', 'confirm_password'])
 
 const Register = () => {
   const {
     register,
     handleSubmit,
     watch,
+    setError,
     getValues,
     formState: { errors }
   } = useForm<FormData>({
@@ -35,11 +33,14 @@ const Register = () => {
     //onValid
     console.log(data)
     const body = omit(data, ['confirm_password'])
-    // registerAccountMutation.mutate(body, {
-    //   onSuccess: (data) => {
-    //     console.log(data)
-    //   }
-    // })
+    registerAccountMutation.mutate(body, {
+      onSuccess: (data) => {
+        console.log(data)
+      },
+      onError: (error) => {
+        console.log(error)
+      }
+    })
   })
 
   return (
@@ -69,7 +70,7 @@ const Register = () => {
               ></Input>
               <Input
                 name='confirm_password'
-                type='confirm_password'
+                type='password'
                 autoComplete='on'
                 className='mt-2'
                 placeholder='Confirm_password'
