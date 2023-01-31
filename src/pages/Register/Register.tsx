@@ -1,5 +1,5 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useContext } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { getRules, schema, Schema } from 'src/utils/rules'
 
@@ -11,11 +11,14 @@ import { registerAccount } from 'src/apis/auth.api'
 import omit from 'lodash/omit'
 import { isAxiosUnprocessableEntityError } from 'src/utils/utils'
 import { ErrorResponse } from 'src/types/utils.type'
+import { AppContext } from 'src/contexts/app.context'
 
 type FormData = Pick<Schema, 'email' | 'password' | 'confirm_password'>
 const registerSchema = schema.pick(['email', 'password', 'confirm_password'])
 
 const Register = () => {
+  const { setIsAuthenticated } = useContext(AppContext)
+  const navigate = useNavigate()
   const {
     register,
     handleSubmit,
@@ -37,7 +40,8 @@ const Register = () => {
     const body = omit(data, ['confirm_password'])
     registerAccountMutation.mutate(body, {
       onSuccess: (data) => {
-        console.log(data)
+        setIsAuthenticated(true)
+        navigate('/')
       },
       onError: (error) => {
         if (isAxiosUnprocessableEntityError<ErrorResponse<Omit<FormData, 'confirm_password'>>>(error)) {

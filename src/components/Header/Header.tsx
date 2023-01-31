@@ -1,11 +1,26 @@
-import React, { useRef, useState } from 'react'
+import React, { useContext, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useFloating, FloatingPortal, arrow, offset, shift } from '@floating-ui/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Popover from '../Popover'
 import { divide } from 'lodash'
+import { useMutation } from '@tanstack/react-query'
+import { logout } from 'src/apis/auth.api'
+import { AppContext } from 'src/contexts/app.context'
 
 export default function Header() {
+  const { setIsAuthenticated } = useContext(AppContext)
+  const logoutMutation = useMutation({
+    mutationFn: () => logout(),
+    onSuccess: () => {
+      setIsAuthenticated(false)
+    }
+  })
+
+  const handleLogout = () => {
+    logoutMutation.mutate()
+  }
+
   return (
     <div className='bg-[linear-gradient(-180deg,#f53d2d,#f63)] pb-5 pt-2 text-white'>
       <div className='container'>
@@ -56,7 +71,10 @@ export default function Header() {
                 <Link to='/' className='block py-2 px-3 hover:bg-slate-100 bg-white hover:text-cyan-500'>
                   Đơn mua
                 </Link>
-                <button className=' w-full text-left block py-2 px-3 hover:bg-slate-100 bg-white hover:text-cyan-500'>
+                <button
+                  onClick={handleLogout}
+                  className=' w-full text-left block py-2 px-3 hover:bg-slate-100 bg-white hover:text-cyan-500'
+                >
                   Đăng xuất
                 </button>
               </div>
