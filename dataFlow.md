@@ -10,10 +10,10 @@
 
 - Chuẩn bị :
 
-  > viết sẵn các hàm lưu, lấy , xóa biến ở trong local storage
+  > viết sẵn các hàm lưu, lấy , xóa biến ( access_token ) ở trong local storage
 
 ```js
-export const saveAccessTokenToLS = (access_token: string) => {
+export const setAccessTokenToLS = (access_token: string) => {
   localStorage.setItem('access_token', access_token)
 }
 export const clearAccessTokenFromLS = () => {
@@ -58,7 +58,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         if (url === '/login' || url === '/register') {
           this.accessToken = (response.data as AuthResponse).data.access_token
           // lưu biến vào biến accessToken đã khai báo
-          saveAccessTokenToLS(this.accessToken)
+          setAccessTokenToLS(this.accessToken)
           // lưu biến này vào trong LocalStorage
         } else if (url === '/logout') {
           this.accessToken = ''

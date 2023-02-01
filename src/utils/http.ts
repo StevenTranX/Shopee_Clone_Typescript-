@@ -1,10 +1,11 @@
-import { getAccessTokenFromLS } from 'src/utils/auth'
+import path from 'src/constants/path'
+import { clearLS, getAccessTokenFromLS, setProfileToLS } from 'src/utils/auth'
 import { AuthResponse } from './../types/auth.type'
 import { HttpStatusCode } from './../constants/httpStatusCode'
 import { isAxiosUnprocessableEntityError } from 'src/utils/utils'
 import axios, { AxiosError, type AxiosInstance } from 'axios'
 import { toast } from 'react-toastify'
-import { clearAccessTokenFromLS, saveAccessTokenToLS } from './auth'
+import { setAccessTokenToLS } from './auth'
 
 // TODO : viết handle xử lý lưu access_token vào local storage khi response trả về
 class Http {
@@ -37,12 +38,14 @@ class Http {
     this.instance.interceptors.response.use(
       (response) => {
         const { url } = response.config
-        if (url === '/login' || url === '/register') {
-          this.accessToken = (response.data as AuthResponse).data.access_token
-          saveAccessTokenToLS(this.accessToken)
-        } else if (url === '/logout') {
+        if (url === path.register || url === path.login) {
+          const data = response.data as AuthResponse
+          this.accessToken = data.data.access_token
+          setAccessTokenToLS(this.accessToken)
+          setProfileToLS(data.data.user)
+        } else if (url === path.logout) {
           this.accessToken = ''
-          clearAccessTokenFromLS()
+          clearLS()
         }
         return response
       },

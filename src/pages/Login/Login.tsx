@@ -9,6 +9,8 @@ import { isAxiosUnprocessableEntityError } from 'src/utils/utils'
 import { ErrorResponse } from 'src/types/utils.type'
 import Input from 'src/components/Input'
 import { AppContext } from 'src/contexts/app.context'
+import Button from 'src/components/Button'
+import { setProfileToLS } from 'src/utils/auth'
 
 type FormData = Omit<Schema, 'confirm_password'>
 const loginSchema = schema.pick(['email', 'password'])
@@ -36,6 +38,8 @@ const Login = () => {
     loginAccountMutation.mutate(data, {
       onSuccess: (data) => {
         setIsAuthenticated(true)
+        setProfileToLS(data.data.data.user)
+        console.log(data.data.data.user)
         navigate('/')
       },
       onError: (error) => {
@@ -79,12 +83,14 @@ const Login = () => {
                 errorMessage={errors.password?.message}
               ></Input>
               <div className='mt-3'>
-                <button
+                <Button
                   type='submit'
-                  className='w-full text-center py-4 px-2 uppercase bg-red-500 text-white text-sm hover:bg-red-600'
+                  className='w-full text-center py-4 px-2 uppercase bg-red-500 text-white text-sm hover:bg-red-600 flex justify-center items-center'
+                  isLoading={loginAccountMutation.isLoading}
+                  disabled={loginAccountMutation.isLoading}
                 >
                   Đăng nhập
-                </button>
+                </Button>
               </div>
               <div className='flex items-center justify-center mt-8'>
                 <span className='text-gray-400'>Bạn chưa có tài khoản ?</span>

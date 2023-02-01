@@ -12,6 +12,8 @@ import omit from 'lodash/omit'
 import { isAxiosUnprocessableEntityError } from 'src/utils/utils'
 import { ErrorResponse } from 'src/types/utils.type'
 import { AppContext } from 'src/contexts/app.context'
+import Button from 'src/components/Button'
+import { setProfileToLS } from 'src/utils/auth'
 
 type FormData = Pick<Schema, 'email' | 'password' | 'confirm_password'>
 const registerSchema = schema.pick(['email', 'password', 'confirm_password'])
@@ -41,6 +43,7 @@ const Register = () => {
     registerAccountMutation.mutate(body, {
       onSuccess: (data) => {
         setIsAuthenticated(true)
+        setProfileToLS(data.data.data.user)
         navigate('/')
       },
       onError: (error) => {
@@ -93,12 +96,14 @@ const Register = () => {
                 register={register}
                 errorMessage={errors.confirm_password?.message}
               ></Input>
-              <button
+              <Button
                 type='submit'
-                className='w-full text-center py-4 px-2 uppercase bg-red-500 text-white text-sm hover:bg-red-600'
+                className='w-full text-center py-4 px-2 uppercase bg-red-500 text-white text-sm hover:bg-red-600 flex items-center justify-center'
+                isLoading={registerAccountMutation.isLoading}
+                disabled={registerAccountMutation.isLoading}
               >
                 Đăng ký
-              </button>
+              </Button>
               <div className='flex items-center justify-center mt-8'>
                 <span className='text-gray-400'>Bạn đã có tài khoản ?</span>
                 <Link className='text-red-400 ml-1' to='/login'>
