@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Popover from '../Popover'
 import { divide } from 'lodash'
 import { useMutation } from '@tanstack/react-query'
-import { logout } from 'src/apis/auth.api'
+import authApi from 'src/apis/auth.api'
 import { AppContext } from 'src/contexts/app.context'
 import path from 'src/constants/path'
 import { setProfileToLS } from 'src/utils/auth'
@@ -13,7 +13,7 @@ import { setProfileToLS } from 'src/utils/auth'
 export default function Header() {
   const { isAuthenticated, setIsAuthenticated, profile, setProfile } = useContext(AppContext)
   const logoutMutation = useMutation({
-    mutationFn: () => logout(),
+    mutationFn: () => authApi.logout(),
     onSuccess: () => {
       setIsAuthenticated(false)
       setProfile(null)
