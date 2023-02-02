@@ -25,11 +25,10 @@ export default function ProductList() {
           <div className='col-span-9'>
             <SortProductList />
             <div className='mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3'>
-              {Array(30)
-                .fill(0)
-                .map((_, index) => (
-                  <div key={index} className='col-span-1'>
-                    <Product />
+              {data &&
+                data.data.data.products.map((product) => (
+                  <div key={product._id} className='col-span-1'>
+                    <Product product={product} />
                   </div>
                 ))}
             </div>
