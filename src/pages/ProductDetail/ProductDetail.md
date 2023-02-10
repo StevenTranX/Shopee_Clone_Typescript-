@@ -196,14 +196,52 @@ const generateNameId = (name, id) => {
 }
 ```
 
-3. Nếu muốn lấy lại id từ nameID đã generate dùng hàm 
+3. Nếu muốn lấy lại id từ nameID đã generate dùng hàm
 
-```js 
+```js
 export const getIdFromNameId = (nameId: string) => {
   const arr = nameId.split('-i-')
   return arr[arr.length - 1]
 }
-
 ```
 
 4. Bỏ hàm mới ( generateNameId ) vào thẻ link của Product để gọi trang detail , rồi từ trang detail, gọi Id từ nameId để call APi như bình thường
+
+## Render thêm sản phẩm ở mục "CÓ THỂ BẠN CŨNG THÍCH " ?
+
+Vẫn kết hợp dùng react-query, tái sử dụng lại code render từ componnent productList
+
+> Khi đã có productDetail trả về từ API, trong api sẽ có category, lấy ra category.\_id để gọi ra tiếp các sản phẩm có config category bằng react-query( dùng hàm `getProducts(queryConfig)`)
+
+Nhưng lần này, `queryConfig` sẽ khác, không dùng từ hook mà là tự config với `category._id` đã trả về
+
+```js
+const queryConfig: ProductListConfig = { limit: '20', page: '1', category: product?.category._id }
+const { data: productsData } = useQuery({
+  queryKey: ['products', queryConfig],
+  queryFn: () => {
+    return productApi.getProducts(queryConfig)
+  },
+  enabled: Boolean(product),
+  staleTime: 3 * 60 * 1000
+})
+// Sau khi có productsData render  ra giao diện
+```
+
+> Situation1 : Trong productDetail có hàm useEffect, hàm này sẽ tính toán lại product và bị gọi lại nên ở useQuery ta sẽ thêm
+
+```js
+useEffect(() => {
+  if (product && product.images.length > 0) {
+    setActiveImage(product.images[0])
+  }
+}, [product])
+```
+
+```js
+enabled: Boolean(product),
+```
+
+> Situation2 : Trong productDetail cũng có API render ra giống như productList, để cải thiện performance và tránh gọi Api 2 lần
+
+-> Dùng staleTime ở cả 2 component
