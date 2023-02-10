@@ -1,3 +1,4 @@
+/* eslint-disable react/display-name */
 import React, { forwardRef, InputHTMLAttributes } from 'react'
 
 interface Props extends InputHTMLAttributes<HTMLInputElement> {

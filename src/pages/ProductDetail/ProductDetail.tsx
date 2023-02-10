@@ -4,13 +4,14 @@ import { useParams } from 'react-router-dom'
 import productApi from 'src/apis/product.api'
 import InputNumber from 'src/components/InputNumber'
 import ProductRating from 'src/components/ProductRating'
-import { formatCurrency, formatNumberToSocialStyle, rateStale } from 'src/utils/utils'
+import { formatCurrency, formatNumberToSocialStyle, getIdFromNameId, rateStale } from 'src/utils/utils'
 import ProductList from '../ProductList'
 import DOMPurify from 'dompurify'
 import { Product } from 'src/types/product.type'
 
 export default function ProductDetail() {
-  const { id } = useParams()
+  const { nameId } = useParams()
+  const id = getIdFromNameId(nameId as string)
   const { data: productDetaildata } = useQuery({
     queryKey: ['product', id],
     queryFn: () => productApi.getProductDetail(id as string)
@@ -44,32 +45,25 @@ export default function ProductDetail() {
 
   const handleZoom = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     const rect = event.currentTarget.getBoundingClientRect()
+    const image = imageRef.current as HTMLImageElement
+    const { offsetY, offsetX } = event.nativeEvent
 
-    const img = imageRef.current as HTMLImageElement
-
-    const { naturalWidth, naturalHeight } = img
-    // Cách 1: Lấy offsetX, offsetY đơn giản khi chúng ta đã xử lý được bubble event
-    // const { offsetX, offsetY } = event.nativeEvent
-
-    const offsetX = event.pageX - (rect.x + window.scrollX)
-    const offsetY = event.pageY - (rect.y + window.scrollY)
+    const { naturalHeight, naturalWidth } = image
     const top = offsetY * (1 - naturalHeight / rect.height)
-    const left = offsetX * (1 - naturalWidth / rect.height)
+    const left = offsetX * (1 - naturalWidth / rect.width)
 
-    img.style.width = naturalWidth + 'px'
-    img.style.height = naturalHeight + 'px'
-    img.style.maxWidth = 'unset'
-    img.style.top = top + 'px'
-    img.style.left = left + 'px'
+    image.style.top = top + 'px'
+    image.style.left = left + 'px'
+    image.style.width = naturalWidth + 'px'
+    image.style.height = naturalHeight + 'px'
+    image.style.maxWidth = 'unset'
   }
-  //TODO : viết markdown đê recap lại chức năng hover
+  const handleRemoveZoom = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    imageRef.current?.removeAttribute('style')
+  }
 
   const chooseActive = (img: string) => {
     setActiveImage(img)
-  }
-
-  const handleRemoveZoom = () => {
-    imageRef.current?.removeAttribute('style')
   }
 
   if (!product) return null

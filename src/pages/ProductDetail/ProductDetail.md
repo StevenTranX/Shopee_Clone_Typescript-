@@ -102,3 +102,108 @@ const currentImages = useMemo(
   [product, currentIndexImages]
 )
 ```
+
+## Flow và Xử lý chức năng zoom hover
+
+> Tình huống : Khi user hover vào hình, ta sẽ xử lý handleZoom để bức tranh phóng to lên, vậy ta sẽ làm như thế nào
+
+1. Đầu tiên khi ta inspect vào ảnh thì ta thấy được bức hảnh có 2 size :
+
+rendered size : `397 x 397x`
+
+Intrinsic size : `720 x 720` ( intrinsic : bản chất bên trong )
+
+Vậy nên, ý tưởng là khi ta hover vào, thì thẻ div chứa hình ảnh, sẽ render ra hình ảnh gốc cho nó to lên, dùng thêm overflow-hidden che phần bị lòi ra ngoài
+
+> Vậy chúng ta cần những yếu tố nào để làm chức năng này ?
+
+> > 1.  Khi user hover vào gọi handleZoom - `onMouseMove` - ngược lại là `onMouseLeave`
+
+> > 2.  Trong hàm handleZoom, cần lấy ra tọa độ của thẻ div như x, y , width, height, top .... ( hàm `event.currentTarget.getBoundingClientRect()`)
+
+![Alt text](./Imgs/zoom2.png 'Title')
+
+> > 3. Sau khi có tọa độ thẻ div, ta cũng cần phải lấy được tọa độ - thông tin của thẻ img -> useRef vào img
+
+> > 4. Cần hiểu về khái niệm offsetX và offsetY, offsetX là tọa độ của chuột so với chiều ngang, offsetY là tọa độ của chuột so với chiều dọc của thẻ div gọi hàm handleZoom
+
+> > 5.  Tính được thuật toán của top và left khi hover để gán lại cho imageRef
+
+![Alt text](./Imgs/zoom6.png 'Title')
+
+```js
+const handleZoom = (event) => {
+  const image = imageRef.current
+  const rect = event.currentTarget.(getBoundingClientReact())
+  const {naturalWidth, naturalHeight} = image
+  const {offsetX , offsetY} = event.nativeEvent()
+  // Gọi những thứ ta cần
+
+
+  const top = offsetX * (1 - (naturalHeight / rect.height))
+  const left = offsetY * (1 -(naturalWidth / rect.width))
+
+  image.style.top = top + 'px'
+  image.style.left = left + 'px'
+}
+
+```
+
+> > 6.  Vì sao `const top = offsetX * (1 - (naturalHeight / rect.height))`
+
+Vì zoom này khi user hover vào, bức ảnh sẽ chạy theo chiều ngược của con trỏ chuột, ví dụ hover xuống thì bức ảnh chạy lên
+
+nên ta sẽ lấy 0 hoặc 1 - ( `định vị chuột * ảnh khi zoom` ) để có hiệu ứng như trên
+
+Cuối cùng ta tính định vị chuột KHI ĐANG ZOOM bằng cách
+
+`const top = vị trí chuột hiện tại \* tọa độ số âm của hình đang zoom
+
+> > 7. Hiện tượng bubble event
+
+![Alt text](./Imgs/zoom3.png 'Title')
+
+Khi ta làm handleZoom cho thẻ div, ta sẽ có hiện tượng rất giật khi hover là vì handleZoom cũng đang tính toán cho thẻ con img ở trong, nên lúc nó lấy tọa độ cha, lúc tọa độ con dẫn đến rất giật
+
+=> Solution : thêm sự kiện pointer-events-none cho thẻ img để không tính toán thẻ img nữa
+
+> > 8.  Thuật toán không quan tâm đến bubble event
+
+```js
+const offsetX = event.pageX - (rect.x + window.scrollX)
+const offsetY = event.pageY - (rect.y + window.scrollY)
+```
+
+Tự tính toán offsetX offsetY không thông qua `event.nativeEvent()`
+
+## Xử lý URL thân thiện SEO ?
+
+> Vấn đề : khi ta vào trang chính của shopee.vn thì ta thấy khi vào trang productDetail, tên của sản phẩm xuất hiện ở trên thanh URL, dù ta có xóa thì trang shopee vẫn hoạt động bình thường vì nó chỉ gọi theo ID mà thôi. Vậy ta sẽ generate ra tên của sản phẩm trên thanh URL như thế nào
+
+1. Tạo hàm remove ký tự đặc biệt
+
+```js
+const removeSpecialCharacter = (str: string) =>
+  // eslint-disable-next-line no-useless-escape
+  str.replace(/!|@|%|\^|\*|\(|\)|\+|\=|\<|\>|\?|\/|,|\.|\:|\;|\'|\"|\&|\#|\[|\]|~|\$|_|`|-|{|}|\||\\/g, '')
+```
+
+2. Tạo hàm generate ra từ dãy string của hàm `removeSpecialCharacater`
+
+```js
+const generateNameId = (name, id) => {
+  return removeSpecialCharacter(name).replace(/\s/g, '-') + `-i-${id}`
+}
+```
+
+3. Nếu muốn lấy lại id từ nameID đã generate dùng hàm 
+
+```js 
+export const getIdFromNameId = (nameId: string) => {
+  const arr = nameId.split('-i-')
+  return arr[arr.length - 1]
+}
+
+```
+
+4. Bỏ hàm mới ( generateNameId ) vào thẻ link của Product để gọi trang detail , rồi từ trang detail, gọi Id từ nameId để call APi như bình thường
