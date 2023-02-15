@@ -42,3 +42,11 @@ Không cần handle lại API vì react-query thấy URL thay đổi thì sẽ t
 > Situation : Nếu muốn giữ lại những searchConfig như giữ lại order thì sao ?
 
 Vẫn là hàm omit từ lodash, tùy theo nhu cầu của business mà giữ lại hoặc omit ra.
+
+## Lưu ý về mounting của Header và useQuery
+
+- Khi chúng ta chuyển trang thì HEader chỉ bị re-render vì header nằm trong phần mainLayout, mà mainLayout được port vào bởi react-router-dom, nó thông minh để không unmount cái mainLAyout, chỉ render lại thôi
+
+- ( Vẫn trừ trường hợp logout, register vì ko dùng mainLAyout )
+
+- Nên các query này sẽ không có bị inactive => không bị gọi lại => không cần set stale : infinity

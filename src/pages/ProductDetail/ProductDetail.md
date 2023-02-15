@@ -245,3 +245,87 @@ enabled: Boolean(product),
 > Situation2 : Trong productDetail cũng có API render ra giống như productList, để cải thiện performance và tránh gọi Api 2 lần
 
 -> Dùng staleTime ở cả 2 component
+
+## Click "Thêm vào giỏ hàng" thì sẽ add items vào trong Popover giỏ hàng, cùng với đó là hiện tổng số lượng items add vào ở badge
+
+> Chuẩn bị : khai báo type và api cho chức năng purchase này
+
+```js
+
+const purchaseApi = {
+  addToCart(body: { product_id: string; buy_count: number }) {
+    return http.post<SuccessResponse<Purchase>>(`${URL}/add-to-cart`, body)
+  },
+  getPurchaseList(params: { status: PurchaseListStatus }) {
+    return http.get<SuccessResponse<Purchase[]>>(`${URL}`, {
+      params
+    })
+  }
+}
+```
+
+> 1 . Khi bấm vào thêm vào giỏ hàng -> gọi đến add-to-cart -> truyền vào `product._id` và localState `buy_count`
+
+```js
+  const addToCart = () => {
+    addToCartMutation.mutate(
+      {
+        buy_count: buyCount,
+        product_id: product?._id as string
+      },)
+  }
+```
+
+> 2 . Khi đã add to cart thành công, cập nhật lại list ở popOver với api getPurchaseList
+
+```js
+const { data: purchasesInCartData } = useQuery({
+  queryKey: ['purchases', { status: purchasesStatus.inCart }],
+  queryFn: () => purchaseApi.getPurchaseList({ status: purchasesStatus.inCart })
+})
+
+const purchasesInCart = purchasesInCartData?.data.data
+// ( từ purchasesInCart này render ra)
+```
+
+> 3 . Problem : khi ta add to cart thì trong purchaseList ta lại không cập nhật
+
+-> Dùng invalidateQueries trong queryClient
+
+```js
+ const addToCart = () => {
+    addToCartMutation.mutate(
+      {
+        buy_count: buyCount,
+        product_id: product?._id as string
+      },
+      {
+        onSuccess: (data) => {
+          queryClient.invalidateQueries({
+            queryKey: ['purchases', { status: purchasesStatus.inCart }]
+          })
+          toast.success(data.data.message, { autoClose: 1000 })
+        }
+      }
+    )
+  }
+// Nhớ khai báo status bằng chữ để khi mình review hay người khác đọc code thì sẽ dễ hiểu hơn thay vì đọc dòng này
+//  queryKey: ['purchases', { status: -1}]
+// không hiểu -1 hay 0 là gì cả, magical number :)))
+  export const purchasesStatus = {
+  inCart: -1,
+  all: 0,
+  waitForConfirmmation: 1,
+  waitForGetting: 2,
+  inProgress: 3,
+  delivered: 4,
+  cancelled: 5
+} as const
+
+```
+
+> 4 UI : Trong popover này chỉ có khoảng 5 items thôi, còn lại sẽ hiện ở góc dưới là những sản phẩm còn lại
+
+-> Thì trước khi ta map ra ta phải slice( 0, MaxInCart = 5).map (...).
+
+-> Ngoài ra thì ta sẽ conditional rendering nếu không có sản phẩm nào thì hiện ra hình ảnh không có sản phẩm
