@@ -90,3 +90,240 @@ A. Nếu như trong trường hợp đang có sãn phẩm `chưa check`, thì hi
 B. Nếu sản phẩm tất cả đều được check, thì hiện tại `isAllChecked` đang ở trạng thái `true`
 
 => Click vào chọn tất cả, hàm handleCheckAll được kích hoạt, isAllChecked `true => false`, hàm này đã false, tất cả sản phẩm thành `false`
+
+# Xử lý chức năng gọi API updateCart khi click vào QuantityControl đồng thời checked vẫn giữ nguyên không biến mất bằng keyBy.
+
+- Gọi API updateCart khi click vào QuantityController
+
+  Viết 1 hàm `handleQuantity` để handle việc này
+
+  - Yếu tố cần đảm nhận
+
+        1. Khi nhấn vào increase hoặc decrease thì API được gọi đồng thời disable input
+
+        2. Khi số sản phẩm < 1 thì không được gọi, > max thì không được gọi
+
+        ```js
+         const [extendedPurchases, setExtendedPurchases] = useState<ExtendedPurchase[]>([])
+         const handleQuantity = (purchaseIndex: number, value: number, enabled: boolean) => {
+        if (enabled) {
+          const purchase = extendedPurchases[purchaseIndex]
+          setExtendedPurchases(
+            produce((draft) => {
+              draft[purchaseIndex].disabled = true
+              // Chuyển trạng thái disabled của sản phẩm trong giỏ hàng thành true
+            })
+          )
+          updatePurchaseMutation.mutate({
+            product_id: purchase.product._id,
+            buy_count: value
+          })
+         // GỌI API UPDATE
+        }
+        }
+
+          <QuantityController
+                                  max={purchase.product.quantity}
+                                  value={purchase.buy_count}
+                                  classNameWrapper='flex items-center'
+                                  onIncrease={(value) => handleQuantity(index, value, value <= purchase.product.quantity)}
+                                  onDecrease={(value) => handleQuantity(index, value, value >= 1)}
+                                  disabled={purchase.disabled}
+                                />
+
+        // Ở tham số thứ 3 truyền điều kiện enabled vào
+        ```
+
+        # Problem : Tuy nhiên khi ta set `  draft[purchaseIndex].disabled = true` thì lúc này ta không thao tác ở trên quantityController được nữa
+
+        > Nếu làm đơn giản thì ta có thể copy lại và set `disaled` thành false
+
+        ```js
+        const handleQuantity = (purchaseIndex: number, value: number, enabled: boolean) => {
+          if (enabled) {
+            const purchase = extendedPurchases[purchaseIndex]
+            setExtendedPurchases(
+              produce((draft) => {
+                draft[purchaseIndex].disabled = true
+                // Chuyển trạng thái disabled của sản phẩm trong giỏ hàng thành true
+              })
+            )
+            updatePurchaseMutation.mutate({
+              product_id: purchase.product._id,
+              buy_count: value
+            })
+            // GỌI API UPDATE
+          }
+
+          setExtendedPurchases(
+            produce((draft) => {
+              draft[purchaseIndex].disabled = false
+              // Chuyển trạng thái disabled của sản phẩm trong giỏ hàng thành true
+            })
+          )
+        }
+        ```
+
+        > Ngoài ra, ta có thể gọi hàm `refetch()` ở react - query để render lại sau khi gọi api, khi render lại thì hàm sẽ chạy vào useEffect, và sẽ set `disabled` lại thành false
+
+    ```js
+    const updatePurchaseMutation = useMutation({
+      mutationFn: purchaseApi.updatePurchase,
+      onSuccess: () => {
+        refetch()
+        // hàm này sẽ tự động chạy lại khi gọi api thành công
+      }
+    })
+    ```
+
+# Xử lý khi thao tác trên QuantityController thì `checked` cũng bị set lại thành false với `keyBy` từ `lodash`
+
+> Checked của sản phẩm nếu checked phải giữ nguyên giá trị đó
+
+### Tìm hiểu về hàm `keyBy` từ `lodash`
+
+> Hàm keyBy này sẽ tạo ra những object, có `key` là value của tham số thứ 2 mình truyền vào, ( truyền vào id, thì 1 ,2 là key của object )
+
+> Còn giá trị của key ở trên, chính là 1 object ban đầu ( xem kỹ ví dụ )
+
+```js
+const demoArr = [
+  { id: 1, name: 'Steven' },
+  { id: 2, name: 'Steven2' }
+]
+
+const keyByObj = keyBy(demoArr, 'id')
+console.log(keyByObj)
+
+// => { 1 : { id: 1, name: 'Steven' } , 2 :  { id: 2, name: 'Steven2' }}
+```
+
+### Xử lý logic checked với keyBy như thế nào
+
+Vậy với kỹ thuật keyBy từ lodash, ta có thể dễ dàng tìm được các `id` của các sản phẩm `purchase`
+
+```js
+const extendedPurchasesObject = keyBy(prev, '_id')
+// kết quả
+ {
+ 45789327489237 : {
+   _id :   45789327489237 ,
+   buy_count : 1
+   ...
+ }
+}
+
+...
+```
+
+sau khi đã có object như thế này, việc tìm status `checked` đơn giản hơn, ví dụ ta muốn tìm trạng thái của id đuôi 37, thì ta lấy `45789327489237` chấm tới `checked`
+
+```js
+useEffect(() => {
+  setExtendedPurchases((prev) => {
+    const extendedPurchasesObject = keyBy(prev, '_id')
+    return (
+      purchasesInCart?.map((purchase) => ({
+        ...purchase,
+        disabled: false,
+        checked: Boolean(extendedPurchasesObject[purchase._id]?.checked)
+      })) || []
+    )
+  })
+}, [purchasesInCart])
+```
+
+> Recap lại flow :
+
+1. User nhấn vào số lượng tăng hoặc giảm
+
+2. Lúc này cần truyền hàm vào quantityController `handleQuantity`
+
+3. Hàm này sẽ nhận vào **(value, purchaseIndex, enabled )** , value để cập nhật Api, index để biết đang ở sản phẩm nào,` enabled` để loại trừ sản phẩm < 1 hoặc > max
+
+4. Viết hàm updateMutation, để update giá trị lên server, gửi lên id sản phẩm và buy count ( chính là value )
+
+5. gọi hàm updateMutation ở trong `handleQuantity`, set `purchaseList[purchaseIndex].checked = true`
+
+6. Lúc này thì input sẽ bị disabled, phải tắt nó bằng `false` khi rerender
+
+7. Viết thêm 1 useEffect, để khi purchaseInCart thay đổi, thì chạy lại `disabled = false`
+
+8. Xử lý xong disabled thì `checked` cũng sẽ bị `false` khi thao tác trên input dù nó đã đc check trước đó
+
+9. Trong useEffect, xử lý tìm id đang ở sản phẩm nào của `prev` thì lấy checked của sản phẩm đó - Dùng keyBy ở trên
+
+## Xử lý onType và onBlur khi user không tăng giảm mà viết vào
+
+> onType
+
+Khi `onType` thì ở trong hàm `Quantity Controller` sẽ chạy hàm `handleChange` và trả ra `value` cho hàm `onType` khi gọi ở ngoài
+
+```js
+const handleTypeQuantity = (index) => (value) => {
+  setExtendedPurchase(
+    produce((draft) => {
+      draft[index].buy_count = value
+    })
+  )
+}
+// khi onType được gọi, thì ở dưới onType sẽ được trả ra giá trị, trả giá trị xong nó sẽ gọi hàm handleType, và từ đó set lại buy count
+```
+
+> onFocusOUt
+
+Sau khi user nhập xong, user sẽ outFocus, lúc này ta sẽ thực hiện gọi API, tái sử dụng lại hàm handleQuantity, nhưng lúc này chỉ nên gọi khi value >= 1, < max, và so với giá trị cũ thì khác nhau mới gọi, giống nhau không gọi.
+
+```js
+
+ const handleBlur = (event: React.FocusEvent<HTMLInputElement, Element>) => {
+    onFocusOut && onFocusOut(Number(event.target.value))
+  }
+// Hàm này ở QuantityController
+// * onFocusOut
+ (value) => handleQuantity(   index,
+                                  value,
+                                  value <= purchase.product.quantity &&
+                                    value >= 1 &&
+                                    value !== (purchasesInCart as Purchase[])[index].buy_count)
+
+// Gọi hàm khi onFocusOut
+
+```
+
+> ? Vì sao không so sánh với giá trị mới luôn ?
+
+Vì hàm `handleTypeQuantity` đã set lại `value buy_count` trong `data mới`, nên so sánh với `data mới` sẽ luôn luôn `bằng nhau`, ta **phải** so sánh với `data cũ`
+
+## handleDelete
+
+> Có 2 trường hợp, 1 là delete từng item, ( nút xóa bên hông)
+
+1. Viết hàm deleteMutation, nhận vào tham số productId khi dùng `deleteMutation.mutate`
+
+2. Viết biến lọc checkedPurchase để chỉ delete những product đang checked thôi
+
+```js
+const checkedPurchase = extendedInCart.filter((purchase) => purchase.checked === true)
+```
+
+3. viết hàm handleDelete, lấy ra id của product có index tương ứng
+
+```js
+const handleDelete = (purchaseIndex: number) => () => {
+  const purchaseId = extendedPurchases[purchaseIndex]._id
+  deletePurchaseMutation.mutate([purchaseId])
+}
+```
+
+4. Gọi hàm, truyền index vào
+
+```js
+<button onClick={handleDelete(index)} className='bg-none text-black transition-colors hover:text-orange'>
+  Xóa
+</button>
+```
+
+> TH2 : delete nhiều checked products
+
+Viết hàm `handleDeletePurchases` truyền 1 mảng [purchaseIds] vào thay vì chỉ có `1 id`, nhưng muốn tìm được `purchaseIds` thì phải `map` lại `checkedPurchases` để lấy `tất cả` phần tử, rồi truyền hết vào `mutate`
