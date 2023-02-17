@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import productApi from 'src/apis/product.api'
 import InputNumber from 'src/components/InputNumber'
 import ProductRating from 'src/components/ProductRating'
@@ -14,6 +14,7 @@ import purchaseApi from 'src/apis/purchase.api'
 import { queryClient } from 'src/main'
 import { purchasesStatus } from 'src/constants/purchase'
 import { toast } from 'react-toastify'
+import path from 'src/constants/path'
 
 interface CartData {
   product_id: string
@@ -51,6 +52,7 @@ export default function ProductDetail() {
   const addToCartMutation = useMutation({
     mutationFn: (body: CartData) => purchaseApi.addToCart(body)
   })
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (product && product.images.length > 0) {
@@ -114,6 +116,16 @@ export default function ProductDetail() {
     )
   }
 
+  const buyNow = async () => {
+    const res = await addToCartMutation.mutateAsync({ buy_count: buyCount, product_id: product?._id as string })
+    const purchase = res.data.data
+    navigate(path.cart, {
+      state: {
+        purchaseId: purchase._id
+      }
+    })
+  }
+
   if (!product) return null
   return (
     <div className='bg-gray-200 py-6'>
@@ -149,7 +161,7 @@ export default function ProductDetail() {
                     <path strokeLinecap='round' strokeLinejoin='round' d='M15.75 19.5L8.25 12l7.5-7.5' />
                   </svg>
                 </button>
-                {currentImages.map((img, index) => {
+                {currentImages.map((img) => {
                   const isActive = img === activeImage
                   return (
                     <div className='relative w-full pt-[100%] ' key={img} onMouseEnter={() => chooseActive(img)}>
@@ -244,7 +256,10 @@ export default function ProductDetail() {
                   </svg>
                   Thêm vào giỏ hàng
                 </button>
-                <button className='fkex ml-4 h-12 min-w-[5rem] items-center justify-center rounded-sm bg-orange px-5 capitalize text-white shadow-sm outline-none hover:bg-orange/90'>
+                <button
+                  onClick={buyNow}
+                  className='fkex ml-4 h-12 min-w-[5rem] items-center justify-center rounded-sm bg-orange px-5 capitalize text-white shadow-sm outline-none hover:bg-orange/90'
+                >
                   Mua ngay
                 </button>
               </div>

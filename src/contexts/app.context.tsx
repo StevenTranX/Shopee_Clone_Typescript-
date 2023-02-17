@@ -2,6 +2,7 @@
 // import { getAccessTokenFromLS } from 'src/utils/auth'
 
 import { createContext, useState } from 'react'
+import { Purchase } from 'src/types/purchase.type'
 import { User } from 'src/types/user.type'
 import { getAccessTokenFromLS, getProfileFromLS } from 'src/utils/auth'
 

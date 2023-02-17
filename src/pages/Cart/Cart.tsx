@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import purchaseApi from 'src/apis/purchase.api'
 import Button from 'src/components/Button'
 import QuantityController from 'src/components/QuantityController'
@@ -12,7 +12,7 @@ import produce from 'immer'
 import { keyBy } from 'lodash'
 import { toast } from 'react-toastify'
 
-interface ExtendedPurchase extends Purchase {
+export interface ExtendedPurchase extends Purchase {
   disabled: boolean
   checked: boolean
 }
@@ -51,6 +51,8 @@ export default function Cart() {
     }
   })
 
+  const location = useLocation()
+  const purchaseId = (location.state as { purchaseId: string } | null)?.purchaseId
   const purchasesInCart = purchasesInCartData?.data.data
   const isAllChecked = extendedPurchases.every((purchase) => purchase.checked === true)
   const checkedPurchases = extendedPurchases.filter((purchase) => purchase.checked === true)
@@ -66,14 +68,23 @@ export default function Cart() {
     setExtendedPurchases((prev) => {
       const extendedPurchasesObject = keyBy(prev, '_id')
       return (
-        purchasesInCart?.map((purchase) => ({
-          ...purchase,
-          disabled: false,
-          checked: Boolean(extendedPurchasesObject[purchase._id]?.checked)
-        })) || []
+        purchasesInCart?.map((purchase) => {
+          const hasPurchaseIdFromLocation = purchaseId === purchase._id
+          return {
+            ...purchase,
+            disabled: false,
+            checked: hasPurchaseIdFromLocation || Boolean(extendedPurchasesObject[purchase._id]?.checked)
+          }
+        }) || []
       )
     })
-  }, [purchasesInCart])
+  }, [purchasesInCart, purchaseId])
+
+  useEffect(() => {
+    return () => {
+      window.history.replaceState(null, '')
+    }
+  }, [])
 
   const handleCheck = (purchaseIndex: number) => (event: React.ChangeEvent<HTMLInputElement>) => {
     setExtendedPurchases(
