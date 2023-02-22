@@ -33,19 +33,19 @@ export default function RatingStars({ queryConfig }: Props) {
     <ul className='my-3'>
       {Array(5)
         .fill(0)
-        .map((_, index) => (
-          <li className='py-1 pl-2' key={index}>
+        .map((_, indexRow) => (
+          <li className='py-1 pl-2' key={indexRow}>
             <div
               className='flex cursor-pointer items-center text-sm'
               tabIndex={0}
               role='button'
               aria-hidden='true'
-              onClick={() => handleFilterStar(5 - index)}
+              onClick={() => handleFilterStar(5 - indexRow)}
             >
               {Array(5)
                 .fill(0)
                 .map((_, indexStar) => {
-                  if (indexStar < 5 - index) {
+                  if (indexStar < 5 - indexRow) {
                     return (
                       <svg viewBox='0 0 9.5 8' className='mr-1 h-4 w-4' key={indexStar}>
                         <defs>
@@ -92,7 +92,7 @@ export default function RatingStars({ queryConfig }: Props) {
                     </svg>
                   )
                 })}
-              {index !== 0 && <span>Trở lên</span>}
+              {indexRow !== 0 && <span>Trở lên</span>}
             </div>
           </li>
         ))}

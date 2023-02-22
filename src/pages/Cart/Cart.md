@@ -327,3 +327,75 @@ const handleDelete = (purchaseIndex: number) => () => {
 > TH2 : delete nhiều checked products
 
 Viết hàm `handleDeletePurchases` truyền 1 mảng [purchaseIds] vào thay vì chỉ có `1 id`, nhưng muốn tìm được `purchaseIds` thì phải `map` lại `checkedPurchases` để lấy `tất cả` phần tử, rồi truyền hết vào `mutate`
+
+## Chức năng mua ngay
+
+> Tình huống, ví dụ user đang ở trang productDetail thì user click vào mua ngay phải redirect qua trang `Cart` , nhưng khi redirect qua trang cart thì phải chuyển id của sản phẩm đó qua trang cart đồng thời auto checked cái sản phẩm mà mình chọn mua ngay
+
+    Option 1 : Chọn state global là context API
+
+    Option 2 : Chọn state di chuyển giữa các trang bằng useNavigate và useLocation được cung cấp bởi react-router-dom v6  `chọn cái này`
+
+1. Viết hàm buyCount ở component productDetail
+
+```js
+const buyNow = async () => {
+  const buyNow = async () => {
+    const res = await addToCartMutation.mutateAsync({ buy_count: buyCount, product_id: product?._id as string })
+    const purchase = res.data.data
+    // Gửi purchaseId để bên trang cart map ra
+    navigate(path.cart, {
+      state: {
+        purchaseId: purchase._id
+      }
+    })
+  }
+}
+```
+
+2. Ở bên trang `cart` muốn nhận được state từ state của navigate `productDetail` qua thì phải dùng useLocation
+
+Đồng thời khi chuyển qua trang Cart thì phải
+
+```js
+const location = useLocation
+
+const purchaseId = location.state.purchaseId
+```
+
+3. Lúc này đã lấy được purchaseId, ở bên Cart đã render ra sản phẩm này rồi vì khi ta gọi buyNow thì đã add vô giỏ hàng. việc ta cần làm là xử lý checked
+
+```js
+useEffect(() => {
+  setExtendedPurchases((prev) => {
+    const extendedPurchasesObject = keyBy(prev, '_id')
+    return (
+      purchasesInCart?.map((purchase) => {
+        const hasPurchaseIdFromLocation = purchaseId === purchase._id
+        return {
+          ...purchase,
+          disabled: false,
+          checked: hasPurchaseIdFromLocation || Boolean(extendedPurchasesObject[purchase._id]?.checked)
+        }
+      }) || []
+    )
+  })
+}, [purchasesInCart, purchaseId])
+```
+
+4. Tuy nhiên. lúc này vấn đề xảy ra, state này được lưu vào history của webAPI, khi ta chuyển qua trang khác thì sẽ bị reset checked, còn f5 lại thì checked vẫn còn.
+
+> Điều ta muốn là ngược lại, khi di chuyển qua các trang thì trạng thái checked vẫn còn lưu ở đó, còn khi ta F5 refresh thì mất check
+
+    >> Di chuyển qua trang vẫn lưu thì ta lưu extendedPurchases vào global state => context APIs để không bị mất khi chuyển trang
+
+    >> F5 Refresh mất thì ra dùng replaceState trong history của trình duyệt - kết hợp với useEffect cleanup - nghĩa là khi component unmounted, thì xóa state trong history -> không còn lưu trạng state purchaseId nữa -> ko có `hasPurchaseIdFromLocation`  sẽ ko checked
+
+    ```js
+      useEffect(() => {
+    return () => {
+      window.history.replaceState(null, '')
+    }
+
+}, [])
+```

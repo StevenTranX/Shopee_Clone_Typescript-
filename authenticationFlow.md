@@ -93,3 +93,77 @@ function RejectedRoute() {
   return !isAuthenticated ? <Outlet /> : <Navigate to='/' />
 }
 ```
+
+## Xử lý accessToken bị hết hạn
+
+> situation : accessToken sau 1 thời gian sẽ bị hết hạn, và khi chúng ta thêm product vào giỏ hàng, message sẽ toast lên `" Token không đúng " 3 lần` và chức năng logout cũng`không hoạt động` vì khi logout ta cần accessToken để gửi lên API để logout
+
+Việc cần làm :
+
+- disable retry của queryClient
+
+```js
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 0
+    }
+  }
+})
+```
+
+- handle lỗi 401 ( token không đúng )
+
+  1. khi lỗi trả về 401, vào interceptor handle lỗi,
+
+  ```js
+  function (error: AxiosError) {
+  if (error.response?.status === HttpStatusCode.Unauthorized) {
+          clearLS()
+        }
+  }
+  ```
+
+  2. xóa localStorage
+
+  3. reset context API
+
+- Nhưng khi xóa localStorage thì muốn cập nhật lại UI phải reload lại trang, ta có thể dùng `window.location.reload () ` để page tự reload lại, lúc này trang của chúng ta sẽ không mang tính web app nữa, -> không được hay
+
+> Ta có thể dụng `new Event Target` và `new Event `( tạo 1 sự kiện ) rồi để bên App lắng nghe, sau khi lắng nghe thì reset lại state và clean up sự kiện.
+
+```js auth.ts
+const locaStorageEvent = new EventTarget()
+
+export const clearLS = () => {
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('profile')
+  const clearLSEvent = new Event('clearLS')
+  localStorageEvent.dispatchEvent(clearLSEvent)
+}
+```
+
+> sau khi bắn 1 event ra rồi, qua file App.ts để lắng nghe sự kiện và handle nó
+
+```js App.ts
+const { reset } = useContext(AppContext)
+
+useEffect(() => {
+  localEventTarget.addEventListener('clearLS', reset)
+
+  return () => {
+    localEventTarget.removeEventListener('clearLS', reset)
+  }
+}, [reset])
+```
+
+> Viết hàm reset từ ` useContext` rồi export ra ( nhớ khai báo kiểu dữ liệu cho reset )
+
+```js
+const reset = () => {
+  setIsAuthenticated(false)
+  setExtendedPurchases([])
+  setProfile(null)
+}
+```

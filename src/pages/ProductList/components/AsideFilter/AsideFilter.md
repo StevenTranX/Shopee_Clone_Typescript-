@@ -120,7 +120,7 @@ Vậy làm thuật toán nào thì render được tiêu chí ở trên ?
 
 Vậy điều kiện nào để render ra sao vàng ?
 
-> Điều kiện render ra sao vàng là indexStar < max - indexDiv
+> Điều kiện render ra sao vàng là indexStar < 5 - indexDiv
 
 # Xử lý handleRemoveAll
 

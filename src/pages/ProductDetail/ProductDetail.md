@@ -329,3 +329,5 @@ const purchasesInCart = purchasesInCartData?.data.data
 -> Thì trước khi ta map ra ta phải slice( 0, MaxInCart = 5).map (...).
 
 -> Ngoài ra thì ta sẽ conditional rendering nếu không có sản phẩm nào thì hiện ra hình ảnh không có sản phẩm
+
+
