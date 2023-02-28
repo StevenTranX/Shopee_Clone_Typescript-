@@ -150,3 +150,158 @@ const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
 ```
 
 > Sau khi DateSelect hoạt động tốt rồi thì xử lý onSubmit, nhớ setPRofile lại trong context để các cpn các xài chung, và set lại localStorage
+
+2 luồng upload ảnh
+
+### Cụ thể như sau
+
+1. Choose file của input file rất xấu, bây giờ ta muốn làm 1 nút button, khi button thì trigger upload ảnh, ta sẽ làm ntn ?
+
+> Dùng useRef
+
+tạo biến ref, đặt biến ref này vào file input, rồi onChange input = handleUpload, trong hàm handleUpload ta gọi .click() để trigger input đó lên
+
+```js
+const [file, setFile] = useState()
+const fileInputRef = useRef()
+const handleUpload = () => {
+  fileInputRef.current.click()
+}
+
+<input type = 'file' ref = {fileInputRef} onChange = {onFileChange}  >
+<button onClick = {handleUpload}>Upload ảnh<button/>
+
+```
+
+2. Lúc này thì input đã được triggered lên = hàm `onFileChange`, người dùng chọn ảnh, vậy làm sao hiện ảnh lên trên UI
+
+> Lesson : Khi ta cần 1 giá trị phụ thuộc vào giá trị khác, không cần gọi useState chỉ cần đặt biến
+
+Ta cần 1 biến previewImage phụ thuộc vào biến file. và hàm ta cần dùng ở đây là hàm URL.createObjectURL()
+
+> `URL.createObjectURL(object)` sẽ tạo ra 1 string URL dựa vào object đã đưa vào ở trong param
+> Lưu ý : object ở đây phải là dạng file, blob, mediasource thì mới tạo được
+
+```js
+const onFileChange = (event) => {
+  const fileFromLocal = event.target.files[0]
+  setFile(fileFromLocal)
+  // set lại file của user upload lên
+}
+
+const previewImage = useMemo(() => {
+  return file ? URL.createObjectURL(file) : ''
+}, [file])
+// biến previewImage dùng để biến đổi cái file thành 1 object URL
+```
+
+3. Sau khi có object URL rồi ta có thể bỏ previewImage vào thẻ img để hiện hình ảnh lên
+
+> previewImage sau khi createObjectURL từ file
+
+'blob:http://127.0.0.1:3000/45ddd962-5239-46c2-a859-ca9d86adc7d4' ( biến file hình ảnh local thành 1 url )
+
+4. Sau khi đã có được url ở local để hiển thị, Tuy nhiên ta cùng cần phải cập nhật url này lên trên server, để update ảnh thì chúng ta có 2 luồng flow như sau
+
+> Flow 1. Khi chọn ảnh từ local -> upload lên server ngay lập tức, server trả về url ảnh
+> Nhấn submit thì gửi url ảnh + data form
+> Ưu : nhanh, thực hiện riêng lẻ 2 chức năng
+> Nhược : người dùng dễ spam chọn ảnh, mỗi lần chọn ảnh lại lưu trên server
+
+> Flow 2 Nhấn upload : không upload lên server ( recommended )
+> Nhấn submit thì tiến hành upload server, nếu upload thành công thì tiến hành gọi API update profile.
+> Ưu : không lưu ảnh rác lên server
+> Nhược : chậm vì thực hiện 2 API, upload rồi mới submit
+
+5. onSubmit -> upload ảnh rồi submit data lên
+
+đầu tiên, ta sẽ cần gọi uploadAvatarMutation để sử dụng, sau đó vào hàm onSubmit gọi mutate
+
+> Lưu ý : onSubmit update profile là dạng form data nên ta phải `new FormData ()` rồi `append` dữ liệu vào
+
+```js
+
+try {
+      let avatarName = watchAvatar
+      if (file) {
+        const form = new FormData()
+        form.append('image', file)
+        const uploadRes = await uploadAvatarMutation.mutateAsync(form)
+        avatarName = uploadRes.data.data
+        setValue('avatar', avatarName)
+      }
+}
+```
+
+> Lưu ý : data trả về từ server là tên của hình ảnh được generate `abced.png` , sau khi có avatarName, ta có thể gắn vào baseURL để hiển thị
+
+`https://...../images/${avatarName}`
+
+6. sau khi upload và setValue được avatar thì làm gì tiếp theo ?
+
+=> xử lý submit, add thêm avatar vào form khi gửi lên server \
+
+```js
+const res = await updateProfileMutation.mutateAsync({
+  ...data,
+  date_of_birth: data.date_of_birth?.toISOString(),
+  avatar: avatarName
+})
+setProfile(res.data.data)
+setProfileToLS(res.data.data)
+refetch()
+toast.success(res.data.message)
+```
+
+7. Sau khi có profile có data, dùng context API để lấy ảnh xuống giao diện
+
+> Lưu ý : data chỉ trả về name, làm sao để thành URL
+
+> Viết 1 hàm getAvatarURL , trả về đầy đủ 'http....'
+
+rồi khi muốn render ra giao diện, bỏ hàm vào src của img
+
+```js
+<img src={previewImage || getAvatarURL(profile?.avatar)} alt='' className='h-full w-full rounded-full object-cover' />
+```
+
+8. API chỉ xử lý ảnh dưới 1MB, vậy khi data trả ra error ta phải xử lý như thế nào ?
+
+```js
+catch (error) {
+      if (isAxiosUnprocessableEntityError<ErrorResponse<FormDataError>>(error)) {
+        const formError = error.response?.data.data
+        if (formError) {
+          Object.keys(formError).forEach((key) => {
+            setError(key as keyof FormDataError, {
+              message: formError[key as keyof FormDataError],
+              type: 'Server'
+            })
+          })
+        }
+      }
+    }
+
+    export function isAxiosUnprocessableEntityError<FormError>(error: unknown): error is AxiosError<FormError> {
+  return isAxiosError(error) && error.response?.status === HttpStatusCode.UnprocessableEntity
+}
+```
+
+## Validate upload ảnh
+
+> API không hỗ trợ file hình ảnh quá 1MB và nó phải là định dạng đúng, thì làm sao ta có thể validate
+
+khi ta console event.target.files[0] thì trong file sẽ có 2 yếu tố đó là
+
+lastModifie:1677335376357
+lastModifiedDate:Sat Feb 25 2023 21:29:36 GMT+0700 (Indochina Time) {}
+name:"210-2104700_front-end-web-development.jpg"
+size:222181
+type:"image/jpeg"
+webkitRelativePath:""
+
+size và type
+
+nên khi onFileChange -> làm if else rồi toast lỗi lên.
+
+nếu như file.size > maxSize hoặc !file.type.inclues('image') -> toast

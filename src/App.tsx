@@ -1,7 +1,7 @@
 import useRouteElements from './useRouteElements'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
-import { keyBy } from 'lodash'
+import keyBy from 'lodash/keyBy'
 import { useContext, useEffect } from 'react'
 import { AppContext } from './contexts/app.context'
 import { localEventTarget } from './utils/auth'

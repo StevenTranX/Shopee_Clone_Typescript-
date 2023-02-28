@@ -6,6 +6,7 @@ import { isAxiosUnprocessableEntityError } from 'src/utils/utils'
 import axios, { AxiosError, type AxiosInstance } from 'axios'
 import { toast } from 'react-toastify'
 import { setAccessTokenToLS } from './auth'
+import config from 'src/constants/config'
 
 // TODO : viết handle xử lý lưu access_token vào local storage khi response trả về
 class Http {
@@ -19,7 +20,7 @@ class Http {
     // * còn ta khai báo biến accessToken trong constructor thì dữ liệu được truy xuất trên ram
     // * MÀ TRUY XUẤT Ở RAM THÌ LẠI NHANH HƠN Ổ CỨNG
     this.instance = axios.create({
-      baseURL: 'https://api-ecom.duthanhduoc.com/',
+      baseURL: config.baseURL,
       timeout: 10000,
       headers: {
         'Content-Type': 'Application/json'
@@ -52,7 +53,7 @@ class Http {
       function (error: AxiosError) {
         if (error.response?.status !== HttpStatusCode.UnprocessableEntity) {
           const data: any | undefined = error.response?.data
-          const message = data.message || error.message
+          const message = data?.message || error.message
           toast.error(message)
         }
         if (error.response?.status === HttpStatusCode.Unauthorized) {

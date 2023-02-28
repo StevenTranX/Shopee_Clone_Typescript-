@@ -5,7 +5,7 @@ import classNames from 'classnames'
 import { ProductListConfig } from 'src/types/product.type'
 import { createSearchParams, Link, useNavigate } from 'react-router-dom'
 import path from 'src/constants/path'
-import { omit } from 'lodash'
+import omit from 'lodash/omit'
 interface Props {
   queryConfig: QueryConfig
   totalPage: number
