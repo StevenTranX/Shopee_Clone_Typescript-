@@ -32,3 +32,7 @@ export const formatToSocialNumberStyle = (value: number) => {
 `notation : 'compact'` để chuyển thành 000 -> k, 000.000 -> m
 
 > Lưu ý, trong es2021, js đã cho phép ta dùng dấu underscore \_ để làm cho con số chúng ta dễ đọc hơn 6_000_000
+
+## Làm sao để xử lý việc xuống hàng trong trường hợp tiêu đề quá dài ?
+
+Dùng plugin line-clamp-[số-dòng] trong tailwind css

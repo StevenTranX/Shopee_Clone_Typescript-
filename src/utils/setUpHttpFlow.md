@@ -22,7 +22,7 @@ const http = new Http().instance
 export default http
 ```
 
-3 Sau khi đã có http, t tạo 1 folder api cho mỗi category như product, hay profile/ user, authentication
+3 Sau khi đã có http, ta tạo 1 folder api cho mỗi category như product, hay profile/ user, authentication
 
 ```js
 const authApi = {
